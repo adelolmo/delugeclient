@@ -1,0 +1,11 @@
+{
+	"ImportPath": "github.com/adelolmo/delugeclient",
+	"GoVersion": "go1.8",
+	"GodepVersion": "v79",
+	"Deps": [
+		{
+			"ImportPath": "golang.org/x/net/publicsuffix",
+			"Rev": "10c134ea0df15f7e34d789338c7a2d76cc7a3ab9"
+		}
+	]
+}
