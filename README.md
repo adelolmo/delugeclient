@@ -1,0 +1,2 @@
+# delugeclient
+Go Deluge client
