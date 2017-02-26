@@ -26,8 +26,8 @@ type RpcError struct {
 }
 
 type RpcResponse struct {
-	Id     int        `json:"id"`
-	Result bool        `json:"result"`
+	Id     int `json:"id"`
+	Result bool `json:"result"`
 	Error  RpcError `json:"error"`
 }
 
@@ -69,50 +69,24 @@ func (d *Deluge) Connect() error {
 		return err
 	}
 
-	//fmt.Println("response Status:", response.Status)
-	//fmt.Println("response Headers:", response.Header)
-	//body, _ := ioutil.ReadAll(response.Body)
-	//fmt.Println("response Body:", string(body))
-
-	//rpcResponse := RpcResponse{}
 	var rr RpcResponse
 	json.NewDecoder(response.Body).Decode(&rr)
+	log.Println(rr)
 	if (!rr.Result) {
-		log.Println(rr)
 		return fmt.Errorf("Error code %d! %s.", rr.Error.Code, rr.Error.Message)
 	}
-	//serverUrl, _ := url.Parse("ip-94-23-205.eu")
-	//cookie := d.HttpClient.Jar.Cookies(serverUrl)
-	//fmt.Printf("cookies: %q\n", cookie)
-	//fmt.Println(d.HttpClient.Jar)
 
 	d.Index ++
 	return nil
 }
 
 func (d *Deluge) AddMagnet(magnet string) error {
-	//fmt.Println(d.HttpClient.Jar)
-	//serverUrl, _ := url.Parse(d.ServiceUrl)
-	//cookie := d.HttpClient.Jar.Cookies(serverUrl)
-	//fmt.Printf("cookies: %q\n", cookie[0])
 	var payload = fmt.Sprintf(`{"id":%d, "method":"web.add_torrents", "params":[[{"path":"%s", "options":""}]]}`, d.Index, magnet)
 	response, err := d.HttpClient.Post(d.ServiceUrl, "application/x-json", bytes.NewBufferString(payload))
-
-	//request, err := http.NewRequest("POST", d.ServiceUrl, bytes.NewBuffer(payload))
 	if err != nil {
 		return err
 	}
-	//d.CookieJar.Cookies()
-	//authCookie, _ :=request.Cookie("_session_id")
-	//log.Println(string("cookie: " +authCookie.Value))
-	//client := &http.Client{Transport:d.Transport, Jar:d.CookieJar}
-	//response, err := client.Do(request)
-
 	defer response.Body.Close()
-	//fmt.Println("response Status:", response.Status)
-	//fmt.Println("response Headers:", response.Header)
-	//body, _ := ioutil.ReadAll(response.Body)
-	//fmt.Println("response Body:", string(body))
 	if (response.StatusCode != 200) {
 		return fmt.Errorf("Server error response: %s.", response.Status)
 	}
@@ -127,6 +101,70 @@ func (d *Deluge) AddMagnet(magnet string) error {
 		return fmt.Errorf("Error code %d! %s.", rr.Error.Code, rr.Error.Message)
 	}
 	d.Index ++
+	return nil
+}
 
+type Torrent struct {
+	Id         string
+	Name       string
+	ShareRatio float64
+}
+
+type TorrentEntry struct {
+	Message string `json:"message"`
+	Ratio   float64 `json:"ratio"`
+	Name    string `json:"name"`
+}
+
+type TorrentSet struct {
+	Map map[string]TorrentEntry `json:"torrents"`
+}
+
+type AllResponse struct {
+	Index    int `json:"id"`
+	Torrents TorrentSet `json:"result"`
+	Error    RpcError `json:"error"`
+}
+
+func (d *Deluge) GetAll() ([]Torrent, error) {
+	var payload = fmt.Sprintf(`{"id":%d, "method":"web.update_ui", "params":[["name", "ratio", "message"],{}]}`, d.Index)
+	response, err := d.HttpClient.Post(d.ServiceUrl, "application/x-json", bytes.NewBufferString(payload))
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+	if (response.StatusCode != 200) {
+		return nil, fmt.Errorf("Server error response: %s.", response.Status)
+	}
+
+	//fmt.Println("response Status:", response.Status)
+	//fmt.Println("response Headers:", response.Header)
+	//body, _ := ioutil.ReadAll(response.Body)
+	//fmt.Println("response Body:", string(body))
+
+	var rr AllResponse
+	if err := json.NewDecoder(response.Body).Decode(&rr); err != nil {
+		return nil, errors.New("Unable to parse response body")
+	}
+
+	if (rr.Error.Code > 0) {
+		log.Println(rr)
+		return nil, fmt.Errorf("Error code %d! %s.", rr.Error.Code, rr.Error.Message)
+	}
+
+	//fmt.Println(rr.TheTorrents.TorrentMap)
+	var torrents = make([]Torrent, len(rr.Torrents.Map))
+
+	var index = 0
+	for k, v := range rr.Torrents.Map {
+		//fmt.Printf("key[%s] value[%s]\n", k, v)
+		torrents[index] = Torrent{Id:k, Name:v.Name, ShareRatio:v.Ratio}
+		index++
+	}
+
+	return torrents, nil
+}
+
+func (d *Deluge) Remove(torrentId string) error {
 	return nil
 }
