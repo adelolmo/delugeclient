@@ -161,10 +161,30 @@ func (d *Deluge) GetAll() ([]Torrent, error) {
 		torrents[index] = Torrent{Id:k, Name:v.Name, ShareRatio:v.Ratio}
 		index++
 	}
-
+	d.Index ++
 	return torrents, nil
 }
 
 func (d *Deluge) Remove(torrentId string) error {
+	var payload = fmt.Sprintf(`{"id":%d, "method":"core.remove_torrent", "params":["%s",true]}`, d.Index, torrentId)
+	response, err := d.HttpClient.Post(d.ServiceUrl, "application/x-json", bytes.NewBufferString(payload))
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	if (response.StatusCode != 200) {
+		return fmt.Errorf("Server error response: %s.", response.Status)
+	}
+
+	var rr RpcResponse
+	if err := json.NewDecoder(response.Body).Decode(&rr); err != nil {
+		return errors.New("Unable to parse response body")
+	}
+
+	if (rr.Error.Code > 0) {
+		log.Println(rr)
+		return fmt.Errorf("Error code %d! %s.", rr.Error.Code, rr.Error.Message)
+	}
+	d.Index ++
 	return nil
 }
