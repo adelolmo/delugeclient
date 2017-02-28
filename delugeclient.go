@@ -61,6 +61,12 @@ type AllResponse struct {
 }
 
 func NewDeluge(serverUrl, password string) *Deluge {
+	if len(serverUrl) == 0 {
+		panic("serverUrl cannot be empty")
+	}
+	if len(password) == 0 {
+		panic("password cannot be empty")
+	}
 	log.SetOutput(os.Stdout)
 	options := cookiejar.Options{
 		PublicSuffixList: publicsuffix.List,
@@ -80,9 +86,11 @@ func NewDeluge(serverUrl, password string) *Deluge {
 }
 
 func (d *Deluge) Connect() error {
-	var payload = fmt.Sprintf(`{"id":%d, "method":"auth.login", "params":["%s"]}`, d.Index, d.Password)
+	var payload = fmt.Sprintf(
+		`{"id":%d, "method":"auth.login", "params":["%s"]}`,
+		d.Index, d.Password)
 	var rr RpcResponse
-	err := SendRequest(d.HttpClient, d.ServiceUrl, payload, &rr)
+	err := sendRequest(d.HttpClient, d.ServiceUrl, payload, &rr)
 
 	if err != nil {
 		return err
@@ -96,9 +104,11 @@ func (d *Deluge) Connect() error {
 }
 
 func (d *Deluge) AddMagnet(magnet string) error {
-	var payload = fmt.Sprintf(`{"id":%d, "method":"web.add_torrents", "params":[[{"path":"%s", "options":""}]]}`, d.Index, magnet)
+	var payload = fmt.Sprintf(
+		`{"id":%d, "method":"web.add_torrents", "params":[[{"path":"%s", "options":""}]]}`,
+		d.Index, magnet)
 	var rr RpcResponse
-	err := SendRequest(d.HttpClient, d.ServiceUrl, payload, &rr)
+	err := sendRequest(d.HttpClient, d.ServiceUrl, payload, &rr)
 
 	if err != nil {
 		return err
@@ -112,9 +122,11 @@ func (d *Deluge) AddMagnet(magnet string) error {
 }
 
 func (d *Deluge) GetAll() ([]Torrent, error) {
-	var payload = fmt.Sprintf(`{"id":%d, "method":"web.update_ui", "params":[["name", "ratio", "message"],{}]}`, d.Index)
+	var payload = fmt.Sprintf(
+		`{"id":%d, "method":"web.update_ui", "params":[["name", "ratio", "message"],{}]}`,
+		d.Index)
 	var rr AllResponse
-	err := SendRequest(d.HttpClient, d.ServiceUrl, payload, &rr)
+	err := sendRequest(d.HttpClient, d.ServiceUrl, payload, &rr)
 	if (err != nil) {
 		panic(err)
 	}
@@ -135,9 +147,11 @@ func (d *Deluge) GetAll() ([]Torrent, error) {
 }
 
 func (d *Deluge) Remove(torrentId string) error {
-	var payload = fmt.Sprintf(`{"id":%d, "method":"core.remove_torrent", "params":["%s",true]}`, d.Index, torrentId)
+	var payload = fmt.Sprintf(
+		`{"id":%d, "method":"core.remove_torrent", "params":["%s",true]}`,
+		d.Index, torrentId)
 	var rr RpcResponse
-	err := SendRequest(d.HttpClient, d.ServiceUrl, payload, &rr)
+	err := sendRequest(d.HttpClient, d.ServiceUrl, payload, &rr)
 	if err != nil {
 		return err
 	}
@@ -150,10 +164,10 @@ func (d *Deluge) Remove(torrentId string) error {
 	return nil
 }
 
-func SendRequest(httpClient http.Client, url, payload string, decoder interface{}) error {
-	response, err := httpClient.Post(url, "application/x-json", bytes.NewBufferString(payload))
+func sendRequest(httpClient http.Client, url, payload string, decoder interface{}) error {
+	response, err := httpClient.Post(url, "application/json", bytes.NewBufferString(payload))
 	if err != nil {
-		return err
+		return fmt.Errorf("Connection error. %s.", err)
 	}
 	defer response.Body.Close()
 	if (response.StatusCode != 200) {
