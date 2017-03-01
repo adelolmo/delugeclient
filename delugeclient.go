@@ -44,6 +44,10 @@ type Torrent struct {
 	ShareRatio float64
 }
 
+func (t*Torrent) String() string {
+	return fmt.Sprintf("id=%s name=%s ratio=%f", t.Id, t.Name, t.ShareRatio)
+}
+
 type TorrentEntry struct {
 	Message string `json:"message"`
 	Ratio   float64 `json:"ratio"`
@@ -135,12 +139,9 @@ func (d *Deluge) GetAll() ([]Torrent, error) {
 		return nil, fmt.Errorf("Error code %d! %s.", rr.Error.Code, rr.Error.Message)
 	}
 
-	var torrents = make([]Torrent, len(rr.Torrents.Map))
-
-	var index = 0
+	torrents := make([]Torrent, 0, len(rr.Torrents.Map))
 	for k, v := range rr.Torrents.Map {
-		torrents[index] = Torrent{Id:k, Name:v.Name, ShareRatio:v.Ratio}
-		index++
+		torrents = append(torrents, Torrent{Id:k, Name:v.Name, ShareRatio:v.Ratio})
 	}
 	d.Index ++
 	return torrents, nil

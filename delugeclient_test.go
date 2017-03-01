@@ -88,6 +88,7 @@ func TestGettingAll(t *testing.T) {
 				t.Fail()
 			}
 			fmt.Println(torrents)
+			assert.Equal(t, 2, len(torrents))
 			assert.Equal(t, "asdfgh123456", torrents[0].Id)
 			assert.Equal(t, "Some.Linux.Disto", torrents[0].Name)
 			assert.Equal(t, 4.08238410949707, torrents[0].ShareRatio)
