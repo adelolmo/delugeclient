@@ -42,10 +42,11 @@ type Torrent struct {
 	Id         string
 	Name       string
 	ShareRatio float64
+	Files      []string
 }
 
 func (t*Torrent) String() string {
-	return fmt.Sprintf("id=%s name=%s ratio=%f", t.Id, t.Name, t.ShareRatio)
+	return fmt.Sprintf("id=%s name=%s ratio=%f files=%s", t.Id, t.Name, t.ShareRatio, t.Files)
 }
 
 type TorrentEntry struct {
@@ -125,6 +126,71 @@ func (d *Deluge) AddMagnet(magnet string) error {
 	return nil
 }
 
+type TorrentResult struct {
+	Type     string `json:"type"`
+	Contents map[string]TorrentDetail `json:"contents"`
+}
+
+type TorrentContent struct {
+	Index         int `json:"id"`
+	TorrentResult TorrentResult `json:"result"`
+	Error         RpcError `json:"error"`
+}
+
+type TorrentDetail struct {
+	Priority        int64 `json:"priority"`
+	Path            string `json:"path"`
+	Type            string `json:"type"`
+	ShareRatio      float64 `json:"progress"`
+	TorrentEntryMap map[string]TorrentDetail `json:"contents"`
+}
+
+type Detail struct {
+	Path string `json:"path"`
+}
+
+// Gets the link details about a single link given its hash id (torrentId)
+func (d *Deluge) Get(torrentId string) (*Torrent, error) {
+	var payload = fmt.Sprintf(
+		`{"id":%d, "method":"web.get_torrent_files", "params":["%s"]}`,
+		d.Index, torrentId)
+	var rr TorrentContent
+	err := sendRequest(d.HttpClient, d.ServiceUrl, payload, &rr)
+	if (err != nil) {
+		panic(err)
+	}
+	if (rr.Error.Code > 0) {
+		//log.Println(rr)
+		return nil, fmt.Errorf("Error code %d! %s.", rr.Error.Code, rr.Error.Message)
+	}
+
+	if (rr.TorrentResult.Type == "dir") {
+		for k, v := range rr.TorrentResult.Contents {
+
+			contents := rr.TorrentResult.Contents[k]
+			files := make([]string, 0, len(rr.TorrentResult.Contents[k].TorrentEntryMap))
+			for x, y := range contents.TorrentEntryMap {
+
+				if (y.Type == "file") {
+					//fmt.Println("type: ", y.Type, " key: ", x)
+					files = append(files, x)
+				}
+			}
+			d.Index ++
+			return &Torrent{
+				Id:torrentId,
+				Name:v.Path,
+				Files:files,
+				ShareRatio:v.ShareRatio,
+			}, nil
+		}
+
+	}
+	return nil, nil
+
+}
+
+// Gets the link details off all entries
 func (d *Deluge) GetAll() ([]Torrent, error) {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"web.update_ui", "params":[["name", "ratio", "message"],{}]}`,
@@ -147,6 +213,7 @@ func (d *Deluge) GetAll() ([]Torrent, error) {
 	return torrents, nil
 }
 
+// Removes a link given its hash id (torrentId)
 func (d *Deluge) Remove(torrentId string) error {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"core.remove_torrent", "params":["%s",true]}`,

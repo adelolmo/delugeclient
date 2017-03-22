@@ -55,6 +55,78 @@ func TestAddingMagnet(t *testing.T) {
 		})
 }
 
+func TestGetting(t *testing.T) {
+	testflight.WithServer(Handler(
+		`{
+		  "id": 1,
+		  "result": {
+		    "type": "dir",
+		    "contents": {
+		      "Some.Linux.Disto": {
+			"priority": 1,
+			"path": "Some.Linux.Disto",
+			"progress": 1,
+			"progresses": [
+			  10199684.56,
+			  0.3,
+			  0.57
+			],
+			"type": "dir",
+			"contents": {
+			  "README.txt": {
+			    "priority": 1,
+			    "index": 1,
+			    "offset": 1019968456,
+			    "progress": 1,
+			    "path": "Some.Linux.Disto\/README.txt",
+			    "type": "file",
+			    "size": 30
+			  },
+			  "Distribution.iso": {
+			    "priority": 1,
+			    "index": 0,
+			    "offset": 0,
+			    "progress": 1,
+			    "path": "Some.Linux.Disto\/Distribution.iso",
+			    "type": "file",
+			    "size": 1019968456
+			  },
+			  "distribution.nfo": {
+			    "priority": 1,
+			    "index": 2,
+			    "offset": 1019968486,
+			    "progress": 1,
+			    "path": "Some.Linux.Disto\/distribution.nfo",
+			    "type": "file",
+			    "size": 57
+			  }
+			},
+			"size": 1019968543
+		      }
+		    }
+		  },
+		  "error": null
+		}`),
+		func(r *testflight.Requester) {
+			client := delugeclient.NewDeluge("http://" + r.Url(""), "pass")
+			if err := client.Connect(); err != nil {
+				t.Fail()
+			}
+			torrent, err := client.Get("id")
+			if (err != nil) {
+				fmt.Println(err)
+				t.Fail()
+			}
+			fmt.Println(torrent)
+			assert.Equal(t, "id", torrent.Id)
+			assert.Equal(t, "Some.Linux.Disto", torrent.Name)
+			assert.Equal(t, 1.0, torrent.ShareRatio)
+			assert.Equal(t, "README.txt", torrent.Files[0])
+			assert.Equal(t, "Distribution.iso", torrent.Files[1])
+			assert.Equal(t, "distribution.nfo", torrent.Files[2])
+		})
+}
+
 func TestGettingAll(t *testing.T) {
 	testflight.WithServer(Handler(
 		`
