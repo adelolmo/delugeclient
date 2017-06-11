@@ -65,6 +65,7 @@ type AllResponse struct {
 	Error    RpcError `json:"error"`
 }
 
+// Initialize client
 func NewDeluge(serverUrl, password string) *Deluge {
 	if len(serverUrl) == 0 {
 		panic("serverUrl cannot be empty")
@@ -90,6 +91,7 @@ func NewDeluge(serverUrl, password string) *Deluge {
 	}
 }
 
+// Establish connection to the server
 func (d *Deluge) Connect() error {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"auth.login", "params":["%s"]}`,
@@ -108,6 +110,7 @@ func (d *Deluge) Connect() error {
 	return nil
 }
 
+// Adds a magnet/torrent link
 func (d *Deluge) AddMagnet(magnet string) error {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"web.add_torrents", "params":[[{"path":"%s", "options":""}]]}`,
@@ -160,34 +163,43 @@ func (d *Deluge) Get(torrentId string) (*Torrent, error) {
 		panic(err)
 	}
 	if (rr.Error.Code > 0) {
-		//log.Println(rr)
 		return nil, fmt.Errorf("Error code %d! %s.", rr.Error.Code, rr.Error.Message)
 	}
 
-	if (rr.TorrentResult.Type == "dir") {
-		for k, v := range rr.TorrentResult.Contents {
+	if (rr.TorrentResult.Type != "dir") {
+		return nil, nil
+	}
 
-			contents := rr.TorrentResult.Contents[k]
-			files := make([]string, 0, len(rr.TorrentResult.Contents[k].TorrentEntryMap))
-			for x, y := range contents.TorrentEntryMap {
+	for k, v := range rr.TorrentResult.Contents {
 
-				if (y.Type == "file") {
-					//fmt.Println("type: ", y.Type, " key: ", x)
-					files = append(files, x)
-				}
-			}
-			d.Index ++
+		contents := rr.TorrentResult.Contents[k]
+		if len(contents.TorrentEntryMap) == 0 {
+			files := make([]string, 0, 1)
 			return &Torrent{
 				Id:torrentId,
-				Name:v.Path,
-				Files:files,
-				ShareRatio:v.ShareRatio,
+				Name:contents.Path,
+				Files:append(files, contents.Path),
+				ShareRatio:contents.ShareRatio,
 			}, nil
 		}
 
+		files := make([]string, 0, len(contents.TorrentEntryMap))
+		for x, y := range contents.TorrentEntryMap {
+
+			if (y.Type == "file") {
+				//fmt.Println("type: ", y.Type, " key: ", x)
+				files = append(files, x)
+			}
+		}
+		d.Index ++
+		return &Torrent{
+			Id:torrentId,
+			Name:v.Path,
+			Files:files,
+			ShareRatio:v.ShareRatio,
+		}, nil
 	}
 	return nil, nil
-
 }
 
 // Gets the link details off all entries

@@ -55,7 +55,46 @@ func TestAddingMagnet(t *testing.T) {
 		})
 }
 
-func TestGetting(t *testing.T) {
+func TestGettingSingleFile(t *testing.T) {
+	testflight.WithServer(Handler(
+		`{
+		  "id": 822,
+		  "result": {
+		    "type": "dir",
+		    "contents": {
+		      "Single File.mp4": {
+			"priority": 1,
+			"index": 0,
+			"offset": 0,
+			"progress": 1,
+			"path": "Single File.mp4",
+			"type": "file",
+			"size": 465171004
+		      }
+		    }
+		  },
+		  "error": null
+		}`),
+		func(r *testflight.Requester) {
+			client := delugeclient.NewDeluge("http://" + r.Url(""), "pass")
+			if err := client.Connect(); err != nil {
+				t.Fail()
+			}
+			torrent, err := client.Get("id")
+			if (err != nil) {
+				fmt.Println(err)
+				t.Fail()
+			}
+			fmt.Println(torrent)
+			assert.Equal(t, "id", torrent.Id)
+			assert.Equal(t, "Single File.mp4", torrent.Name)
+			assert.Equal(t, 1.0, torrent.ShareRatio)
+			assert.Equal(t, 1, len(torrent.Files))
+			assert.Equal(t, "Single File.mp4", torrent.Files[0])
+		})
+}
+
+func TestGettingMultipleFiles(t *testing.T) {
 	testflight.WithServer(Handler(
 		`{
 		  "id": 1,
