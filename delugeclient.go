@@ -65,6 +65,7 @@ type AllResponse struct {
 	Error    RpcError `json:"error"`
 }
 
+// Initialize client
 func NewDeluge(serverUrl, password string) *Deluge {
 	if len(serverUrl) == 0 {
 		panic("serverUrl cannot be empty")
@@ -109,6 +110,7 @@ func (d *Deluge) Connect() error {
 	return nil
 }
 
+// Adds a magnet/torrent link
 func (d *Deluge) AddMagnet(magnet string) error {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"web.add_torrents", "params":[[{"path":"%s", "options":""}]]}`,
