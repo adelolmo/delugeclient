@@ -66,7 +66,8 @@ func TestGettingSingleFile(t *testing.T) {
 			"priority": 1,
 			"index": 0,
 			"offset": 0,
-			"progress": 1,
+			"progress": 85.989601135254,
+		    "ratio": 1,
 			"path": "Single File.mp4",
 			"type": "file",
 			"size": 465171004
@@ -81,7 +82,7 @@ func TestGettingSingleFile(t *testing.T) {
 				t.Fail()
 			}
 			torrent, err := client.Get("id")
-			if (err != nil) {
+			if err != nil {
 				fmt.Println(err)
 				t.Fail()
 			}
@@ -104,12 +105,13 @@ func TestGettingMultipleFiles(t *testing.T) {
 		      "Some.Linux.Disto": {
 			"priority": 1,
 			"path": "Some.Linux.Disto",
-			"progress": 1,
+			"progress": 85.989601135254,
 			"progresses": [
 			  10199684.56,
 			  0.3,
 			  0.57
 			],
+		    "ratio": 1,
 			"type": "dir",
 			"contents": {
 			  "README.txt": {
@@ -152,7 +154,7 @@ func TestGettingMultipleFiles(t *testing.T) {
 				t.Fail()
 			}
 			torrent, err := client.Get("id")
-			if (err != nil) {
+			if err != nil {
 				fmt.Println(err)
 				t.Fail()
 			}
@@ -160,6 +162,7 @@ func TestGettingMultipleFiles(t *testing.T) {
 			assert.Equal(t, "id", torrent.Id)
 			assert.Equal(t, "Some.Linux.Disto", torrent.Name)
 			assert.Equal(t, 1.0, torrent.ShareRatio)
+			assert.Equal(t, 85.989601135254, torrent.Progress)
 			assert.Equal(t, "README.txt", torrent.Files[0])
 			assert.Equal(t, "Distribution.iso", torrent.Files[1])
 			assert.Equal(t, "distribution.nfo", torrent.Files[2])
@@ -194,7 +197,7 @@ func TestGettingAll(t *testing.T) {
 				t.Fail()
 			}
 			torrents, err := client.GetAll()
-			if (err != nil) {
+			if err != nil {
 				fmt.Println(err)
 				t.Fail()
 			}
@@ -239,7 +242,7 @@ func Handler(response string) http.Handler {
 	m.Post("/json", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		body, _ := ioutil.ReadAll(req.Body)
 		w.WriteHeader(200)
-		if (strings.Contains(string(body), "auth.login")) {
+		if strings.Contains(string(body), "auth.login") {
 			io.WriteString(w, `{"id": 2, "result": true, "error": null}`)
 			return
 		}
