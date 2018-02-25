@@ -132,10 +132,10 @@ func (d *Deluge) AddMagnet(magnet string) error {
 }
 
 // Moves torrent to the queue top
-func (d *Deluge) MoveToQueueTop(magnet string) error {
+func (d *Deluge) MoveToQueueTop(torrentId string) error {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"core.queue_top", "params":[["%s"]]}`,
-		d.Index, magnet)
+		d.Index, torrentId)
 	var rr RpcResponse
 	err := sendRequest(d.HttpClient, d.ServiceUrl, payload, &rr)
 
