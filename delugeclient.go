@@ -131,6 +131,25 @@ func (d *Deluge) AddMagnet(magnet string) error {
 	return nil
 }
 
+// Moves torrent to the queue top
+func (d *Deluge) MoveToQueueTop(magnet string) error {
+	var payload = fmt.Sprintf(
+		`{"id":%d, "method":"core.queue_top", "params":[["%s"]]}`,
+		d.Index, magnet)
+	var rr RpcResponse
+	err := sendRequest(d.HttpClient, d.ServiceUrl, payload, &rr)
+
+	if err != nil {
+		return err
+	}
+	if rr.Error.Code > 0 {
+		log.Println(rr)
+		return fmt.Errorf("error code %d! %s", rr.Error.Code, rr.Error.Message)
+	}
+	d.Index ++
+	return nil
+}
+
 type TorrentResult struct {
 	Type     string                   `json:"type"`
 	Contents map[string]TorrentDetail `json:"contents"`
