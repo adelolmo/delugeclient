@@ -1,16 +1,16 @@
 package delugeclient_test
 
 import (
-	"github.com/adelolmo/delugeclient"
-	"testing"
 	"fmt"
-	"net/http"
+	"github.com/adelolmo/delugeclient"
+	"github.com/bmizerany/assert"
+	"github.com/bmizerany/pat"
+	"github.com/drewolson/testflight"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"strings"
-	"github.com/drewolson/testflight"
-	"github.com/bmizerany/pat"
-	"github.com/bmizerany/assert"
+	"testing"
 )
 
 func TestNewDelugeNoServerUrl(t *testing.T) {
@@ -18,9 +18,10 @@ func TestNewDelugeNoServerUrl(t *testing.T) {
 		delugeclient.NewDeluge("", "")
 	})
 }
+
 func TestConnection(t *testing.T) {
 	testflight.WithServer(Handler(""), func(r *testflight.Requester) {
-		client := delugeclient.NewDeluge("http://" + r.Url(""), "pass")
+		client := delugeclient.NewDeluge("http://"+r.Url(""), "pass")
 		fmt.Println(r.Url(""))
 		if err := client.Connect(); err != nil {
 			fmt.Println(err)
@@ -31,7 +32,7 @@ func TestConnection(t *testing.T) {
 
 func TestConnectionWrongPassword(t *testing.T) {
 	testflight.WithServer(WrongPasswordHandler(), func(r *testflight.Requester) {
-		client := delugeclient.NewDeluge("http://" + r.Url(""), "xxx")
+		client := delugeclient.NewDeluge("http://"+r.Url(""), "xxx")
 		if err := client.Connect(); err == nil {
 			t.Fail()
 		}
@@ -44,7 +45,7 @@ func TestAddingMagnet(t *testing.T) {
 		{"id": 2, "result": true, "error":{"code":0, "message":""}}
 		`),
 		func(r *testflight.Requester) {
-			client := delugeclient.NewDeluge("http://" + r.Url(""), "pass")
+			client := delugeclient.NewDeluge("http://"+r.Url(""), "pass")
 			if err := client.Connect(); err != nil {
 				t.Fail()
 			}
@@ -53,6 +54,33 @@ func TestAddingMagnet(t *testing.T) {
 				t.Fail()
 			}
 		})
+}
+
+func TestGettingNoFiles(t *testing.T) {
+	testflight.WithServer(Handler(
+		`{
+		  "id": 2,
+		  "result": {
+			"type": "dir",
+			"contents": {}
+		  },
+		  "error": null
+		}`), func(r *testflight.Requester) {
+		client := delugeclient.NewDeluge("http://"+r.Url(""), "pass")
+		if err := client.Connect(); err != nil {
+			t.Fail()
+		}
+		torrent, err := client.Get("id")
+		if err != nil {
+			fmt.Println(err)
+			t.Fail()
+		}
+		fmt.Println(torrent)
+		assert.Equal(t, "id", torrent.Id)
+		assert.Equal(t, "", torrent.Name)
+		assert.Equal(t, 0.0, torrent.ShareRatio)
+		assert.Equal(t, 0, len(torrent.Files))
+	})
 }
 
 func TestGettingSingleFile(t *testing.T) {
@@ -77,7 +105,7 @@ func TestGettingSingleFile(t *testing.T) {
 		  "error": null
 		}`),
 		func(r *testflight.Requester) {
-			client := delugeclient.NewDeluge("http://" + r.Url(""), "pass")
+			client := delugeclient.NewDeluge("http://"+r.Url(""), "pass")
 			if err := client.Connect(); err != nil {
 				t.Fail()
 			}
@@ -102,9 +130,9 @@ func TestGettingMultipleFiles(t *testing.T) {
 		  "result": {
 		    "type": "dir",
 		    "contents": {
-		      "Some.Linux.Disto": {
+		      "Some.Linux.Distro": {
 			"priority": 1,
-			"path": "Some.Linux.Disto",
+			"path": "Some.Linux.Distro",
 			"progress": 85.989601135254,
 			"progresses": [
 			  10199684.56,
@@ -119,7 +147,7 @@ func TestGettingMultipleFiles(t *testing.T) {
 			    "index": 1,
 			    "offset": 1019968456,
 			    "progress": 1,
-			    "path": "Some.Linux.Disto\/README.txt",
+			    "path": "Some.Linux.Distro\/README.txt",
 			    "type": "file",
 			    "size": 30
 			  },
@@ -128,7 +156,7 @@ func TestGettingMultipleFiles(t *testing.T) {
 			    "index": 0,
 			    "offset": 0,
 			    "progress": 1,
-			    "path": "Some.Linux.Disto\/Distribution.iso",
+			    "path": "Some.Linux.Distro\/Distribution.iso",
 			    "type": "file",
 			    "size": 1019968456
 			  },
@@ -137,7 +165,7 @@ func TestGettingMultipleFiles(t *testing.T) {
 			    "index": 2,
 			    "offset": 1019968486,
 			    "progress": 1,
-			    "path": "Some.Linux.Disto\/distribution.nfo",
+			    "path": "Some.Linux.Distro\/distribution.nfo",
 			    "type": "file",
 			    "size": 57
 			  }
@@ -149,7 +177,7 @@ func TestGettingMultipleFiles(t *testing.T) {
 		  "error": null
 		}`),
 		func(r *testflight.Requester) {
-			client := delugeclient.NewDeluge("http://" + r.Url(""), "pass")
+			client := delugeclient.NewDeluge("http://"+r.Url(""), "pass")
 			if err := client.Connect(); err != nil {
 				t.Fail()
 			}
@@ -160,7 +188,7 @@ func TestGettingMultipleFiles(t *testing.T) {
 			}
 			fmt.Println(torrent)
 			assert.Equal(t, "id", torrent.Id)
-			assert.Equal(t, "Some.Linux.Disto", torrent.Name)
+			assert.Equal(t, "Some.Linux.Distro", torrent.Name)
 			assert.Equal(t, 1.0, torrent.ShareRatio)
 			assert.Equal(t, 85.989601135254, torrent.Progress)
 			assert.Equal(t, "README.txt", torrent.Files[0])
@@ -179,7 +207,7 @@ func TestGettingAll(t *testing.T) {
 		      "asdfgh123456": {
 			"message": "OK",
 			"ratio": 4.08238410949707,
-			"name": "Some.Linux.Disto"
+			"name": "Some.Linux.Distro"
 		      },
 		      "123456asdfgh": {
 			"message": "OK",
@@ -192,7 +220,7 @@ func TestGettingAll(t *testing.T) {
 		}
 		`),
 		func(r *testflight.Requester) {
-			client := delugeclient.NewDeluge("http://" + r.Url(""), "pass")
+			client := delugeclient.NewDeluge("http://"+r.Url(""), "pass")
 			if err := client.Connect(); err != nil {
 				t.Fail()
 			}
@@ -204,7 +232,7 @@ func TestGettingAll(t *testing.T) {
 			fmt.Println(torrents)
 			assert.Equal(t, 2, len(torrents))
 			assert.Equal(t, "asdfgh123456", torrents[0].Id)
-			assert.Equal(t, "Some.Linux.Disto", torrents[0].Name)
+			assert.Equal(t, "Some.Linux.Distro", torrents[0].Name)
 			assert.Equal(t, 4.08238410949707, torrents[0].ShareRatio)
 			assert.Equal(t, "123456asdfgh", torrents[1].Id)
 			assert.Equal(t, "Some.Video", torrents[1].Name)
@@ -218,7 +246,7 @@ func TestRemovingTorrent(t *testing.T) {
 		{"id": 2, "result": true, "error":{"code":0, "message":""}}
 		`),
 		func(r *testflight.Requester) {
-			client := delugeclient.NewDeluge("http://" + r.Url(""), "pass")
+			client := delugeclient.NewDeluge("http://"+r.Url(""), "pass")
 			if err := client.Connect(); err != nil {
 				t.Fail()
 			}

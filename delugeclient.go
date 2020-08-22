@@ -1,15 +1,15 @@
 package delugeclient
 
 import (
-	"golang.org/x/net/publicsuffix"
-	"net/http/cookiejar"
-	"net/http"
-	"fmt"
-	"log"
-	"crypto/tls"
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"golang.org/x/net/publicsuffix"
+	"log"
+	"net/http"
+	"net/http/cookiejar"
 	"os"
 )
 
@@ -32,7 +32,7 @@ type RpcResponse struct {
 }
 
 func (r RpcResponse) String() string {
-	return fmt.Sprintf("id: '%d' result: '%s' error: {%s}", r.Id, r.Result, r.Error)
+	return fmt.Sprintf("id: '%d' result: '%t' error: {%s}", r.Id, r.Result, r.Error)
 }
 func (e RpcError) String() string {
 	return fmt.Sprintf("code: '%d' message: '%s'", e.Code, e.Message)
@@ -108,7 +108,7 @@ func (d *Deluge) Connect() error {
 		return fmt.Errorf("error code %d! %s", rr.Error.Code, rr.Error.Message)
 	}
 
-	d.Index ++
+	d.Index++
 	return nil
 }
 
@@ -127,7 +127,7 @@ func (d *Deluge) AddMagnet(magnet string) error {
 		log.Println(rr)
 		return fmt.Errorf("error code %d! %s", rr.Error.Code, rr.Error.Message)
 	}
-	d.Index ++
+	d.Index++
 	return nil
 }
 
@@ -146,7 +146,7 @@ func (d *Deluge) MoveToQueueTop(torrentId string) error {
 		log.Println(rr)
 		return fmt.Errorf("error code %d! %s", rr.Error.Code, rr.Error.Message)
 	}
-	d.Index ++
+	d.Index++
 	return nil
 }
 
@@ -192,6 +192,14 @@ func (d *Deluge) Get(torrentId string) (*Torrent, error) {
 		return nil, nil
 	}
 
+	if len(rr.TorrentResult.Contents) == 0 {
+		return &Torrent{
+			Id:         torrentId,
+			Files:      make([]string, 0),
+			ShareRatio: 0,
+		}, nil
+	}
+
 	for k, v := range rr.TorrentResult.Contents {
 
 		contents := rr.TorrentResult.Contents[k]
@@ -213,7 +221,7 @@ func (d *Deluge) Get(torrentId string) (*Torrent, error) {
 				files = append(files, x)
 			}
 		}
-		d.Index ++
+		d.Index++
 		return &Torrent{
 			Id:         torrentId,
 			Name:       v.Path,
@@ -244,7 +252,7 @@ func (d *Deluge) GetAll() ([]Torrent, error) {
 	for k, v := range rr.Torrents.Map {
 		torrents = append(torrents, Torrent{Id: k, Name: v.Name, ShareRatio: v.Ratio, Progress: v.Progress})
 	}
-	d.Index ++
+	d.Index++
 	return torrents, nil
 }
 
@@ -263,7 +271,7 @@ func (d *Deluge) Remove(torrentId string) error {
 		log.Println(rr)
 		return fmt.Errorf("error code %d! %s", rr.Error.Code, rr.Error.Message)
 	}
-	d.Index ++
+	d.Index++
 	return nil
 }
 
