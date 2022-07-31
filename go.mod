@@ -1,6 +1,6 @@
 module github.com/adelolmo/delugeclient
 
-go 1.14
+go 1.18
 
 require (
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869

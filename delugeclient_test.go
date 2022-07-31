@@ -191,9 +191,7 @@ func TestGettingMultipleFiles(t *testing.T) {
 			assert.Equal(t, "Some.Linux.Distro", torrent.Name)
 			assert.Equal(t, 1.0, torrent.ShareRatio)
 			assert.Equal(t, 85.989601135254, torrent.Progress)
-			assert.Equal(t, "README.txt", torrent.Files[0])
-			assert.Equal(t, "Distribution.iso", torrent.Files[1])
-			assert.Equal(t, "distribution.nfo", torrent.Files[2])
+			assertContains(t, []string{"README.txt", "Distribution.iso", "distribution.nfo"}, torrent.Files)
 		})
 }
 
@@ -265,6 +263,7 @@ func WrongPasswordHandler() http.Handler {
 	}))
 	return m
 }
+
 func Handler(response string) http.Handler {
 	m := pat.New()
 	m.Post("/json", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -287,4 +286,18 @@ func assertPanic(t *testing.T, f func()) {
 		}
 	}()
 	f()
+}
+
+func assertContains(t *testing.T, exp []string, got []string) {
+	found := 0
+	for expItem := range exp {
+		for gotItem := range got {
+			if expItem == gotItem {
+				found++
+			}
+		}
+	}
+	if len(exp) != found {
+		t.Errorf("%v:%v", exp, got)
+	}
 }
