@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"os"
+	"reflect"
 )
 
 type Deluge struct {
@@ -31,8 +32,26 @@ type RpcResponse struct {
 	Error  RpcError `json:"error"`
 }
 
+type RpcResponseComplex struct {
+	Id     int             `json:"id"`
+	Result [][]interface{} `json:"result"`
+	Error  RpcError        `json:"error"`
+}
+
+type ResponseEntry struct {
+	HasValue bool
+	Value    string
+}
+
+func (r RpcResponseComplex) result(index int) ResponseEntry {
+	return ResponseEntry{
+		HasValue: reflect.ValueOf(r.Result[index][0]).Bool(),
+		Value:    reflect.ValueOf(r.Result[index][1]).String(),
+	}
+}
+
 func (r RpcResponse) String() string {
-	return fmt.Sprintf("id: '%d' result: '%t' error: {%s}", r.Id, r.Result, r.Error)
+	return fmt.Sprintf("id: '%d' result: '%v' error: {%s}", r.Id, r.Result, r.Error)
 }
 func (e RpcError) String() string {
 	return fmt.Sprintf("code: '%d' message: '%s'", e.Code, e.Message)
@@ -67,7 +86,7 @@ type AllResponse struct {
 	Error    RpcError   `json:"error"`
 }
 
-// Initialize client
+// NewDeluge initializes the client
 func NewDeluge(serverUrl, password string) *Deluge {
 	if len(serverUrl) == 0 {
 		panic("serverUrl cannot be empty")
@@ -93,7 +112,7 @@ func NewDeluge(serverUrl, password string) *Deluge {
 	}
 }
 
-// Establish connection to the server
+// Connect establishes a connection to the server
 func (d *Deluge) Connect() error {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"auth.login", "params":["%s"]}`,
@@ -112,12 +131,12 @@ func (d *Deluge) Connect() error {
 	return nil
 }
 
-// Adds a magnet/torrent link
+// AddMagnet adds a magnet/torrent link
 func (d *Deluge) AddMagnet(magnet string) error {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"web.add_torrents", "params":[[{"path":"%s", "options":""}]]}`,
 		d.Index, magnet)
-	var rr RpcResponse
+	var rr RpcResponseComplex
 	err := sendRequest(d.HttpClient, d.ServiceUrl, payload, &rr)
 
 	if err != nil {
@@ -131,7 +150,7 @@ func (d *Deluge) AddMagnet(magnet string) error {
 	return nil
 }
 
-// Moves torrent to the queue top
+// MoveToQueueTop moves a torrent to the queue top
 func (d *Deluge) MoveToQueueTop(torrentId string) error {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"core.queue_top", "params":[["%s"]]}`,
@@ -174,7 +193,7 @@ type Detail struct {
 	Path string `json:"path"`
 }
 
-// Gets the link details about a single link given its hash id (torrentId)
+// Get the link details about a single link given its hash id (torrentId)
 func (d *Deluge) Get(torrentId string) (*Torrent, error) {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"web.get_torrent_files", "params":["%s"]}`,
@@ -233,7 +252,7 @@ func (d *Deluge) Get(torrentId string) (*Torrent, error) {
 	return nil, nil
 }
 
-// Gets the link details off all entries
+// GetAll gets the link details off all entries
 func (d *Deluge) GetAll() ([]Torrent, error) {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"web.update_ui", "params":[["name", "ratio", "message", "progress"],{}]}`,
@@ -256,7 +275,7 @@ func (d *Deluge) GetAll() ([]Torrent, error) {
 	return torrents, nil
 }
 
-// Removes a link given its hash id (torrentId)
+// Remove removes a link given its hash id (torrentId)
 func (d *Deluge) Remove(torrentId string) error {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"core.remove_torrent", "params":["%s",true]}`,

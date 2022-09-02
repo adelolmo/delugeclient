@@ -42,7 +42,16 @@ func TestConnectionWrongPassword(t *testing.T) {
 func TestAddingMagnet(t *testing.T) {
 	testflight.WithServer(Handler(
 		`
-		{"id": 2, "result": true, "error":{"code":0, "message":""}}
+		{
+			"result": [
+				[
+					true,
+					"441afc541c1fed7329bc277ef6c4ff93c57434ea"
+				]
+			],
+			"error": null,
+			"id": 2
+		}
 		`),
 		func(r *testflight.Requester) {
 			client := delugeclient.NewDeluge("http://"+r.Url(""), "pass")
