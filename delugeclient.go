@@ -87,7 +87,7 @@ type AllResponse struct {
 }
 
 // NewDeluge initializes the client
-func NewDeluge(serverUrl, password string) *Deluge {
+func NewDeluge(serverUrl, password string) Deluge {
 	if len(serverUrl) == 0 {
 		panic("serverUrl cannot be empty")
 	}
@@ -104,7 +104,7 @@ func NewDeluge(serverUrl, password string) *Deluge {
 	}
 	config := &tls.Config{InsecureSkipVerify: true}
 	tr := &http.Transport{TLSClientConfig: config}
-	return &Deluge{
+	return Deluge{
 		ServiceUrl: serverUrl + "/json",
 		Password:   password,
 		Index:      1,
@@ -113,7 +113,7 @@ func NewDeluge(serverUrl, password string) *Deluge {
 }
 
 // Connect establishes a connection to the server
-func (d *Deluge) Connect() error {
+func (d Deluge) Connect() error {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"auth.login", "params":["%s"]}`,
 		d.Index, d.Password)
@@ -132,7 +132,7 @@ func (d *Deluge) Connect() error {
 }
 
 // AddMagnet adds a magnet/torrent link
-func (d *Deluge) AddMagnet(magnet string) error {
+func (d Deluge) AddMagnet(magnet string) error {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"web.add_torrents", "params":[[{"path":"%s", "options":""}]]}`,
 		d.Index, magnet)
@@ -151,7 +151,7 @@ func (d *Deluge) AddMagnet(magnet string) error {
 }
 
 // MoveToQueueTop moves a torrent to the queue top
-func (d *Deluge) MoveToQueueTop(torrentId string) error {
+func (d Deluge) MoveToQueueTop(torrentId string) error {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"core.queue_top", "params":[["%s"]]}`,
 		d.Index, torrentId)
@@ -194,14 +194,14 @@ type Detail struct {
 }
 
 // Get the link details about a single link given its hash id (torrentId)
-func (d *Deluge) Get(torrentId string) (*Torrent, error) {
+func (d Deluge) Get(torrentId string) (*Torrent, error) {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"web.get_torrent_files", "params":["%s"]}`,
 		d.Index, torrentId)
 	var rr TorrentContent
 	err := sendRequest(d.HttpClient, d.ServiceUrl, payload, &rr)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	if rr.Error.Code > 0 {
 		return nil, fmt.Errorf("error code %d! %s", rr.Error.Code, rr.Error.Message)
@@ -253,14 +253,14 @@ func (d *Deluge) Get(torrentId string) (*Torrent, error) {
 }
 
 // GetAll gets the link details off all entries
-func (d *Deluge) GetAll() ([]Torrent, error) {
+func (d Deluge) GetAll() ([]Torrent, error) {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"web.update_ui", "params":[["name", "ratio", "message", "progress"],{}]}`,
 		d.Index)
 	var rr AllResponse
 	err := sendRequest(d.HttpClient, d.ServiceUrl, payload, &rr)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	if rr.Error.Code > 0 {
 		log.Println(rr)
@@ -276,7 +276,7 @@ func (d *Deluge) GetAll() ([]Torrent, error) {
 }
 
 // Remove removes a link given its hash id (torrentId)
-func (d *Deluge) Remove(torrentId string) error {
+func (d Deluge) Remove(torrentId string) error {
 	var payload = fmt.Sprintf(
 		`{"id":%d, "method":"core.remove_torrent", "params":["%s",true]}`,
 		d.Index, torrentId)
@@ -303,12 +303,6 @@ func sendRequest(httpClient http.Client, url, payload string, decoder interface{
 	if response.StatusCode != 200 {
 		return fmt.Errorf("server error response: %s", response.Status)
 	}
-
-	//fmt.Println("response Status:", response.Status)
-	//fmt.Println("response Headers:", response.Header)
-	//body, _ := ioutil.ReadAll(response.Body)
-	//fmt.Println("response Body:", string(body))
-
 	if err := json.NewDecoder(response.Body).Decode(&decoder); err != nil {
 		return errors.New("unable to parse response body")
 	}
