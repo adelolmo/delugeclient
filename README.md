@@ -31,7 +31,7 @@ Simple Deluge client for Go
         fmt.Printf("%s,%s,%f,%f\n", t.Id, t.Name, t.Progress, t.ShareRatio)
     }
 
-    if err = deluge.Remove(t.Id); err != nil {
+    if err = deluge.Remove("f7647dfb2e9d..."); err != nil {
         panic(err)
     }
 ```
