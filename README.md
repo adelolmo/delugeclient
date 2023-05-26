@@ -23,6 +23,7 @@ Simple Deluge client for Go
         panic(err)
     }
 
+    // List all elements in the server
     torrents, err := deluge.GetAll()
     if err != nil {
         panic(err)
@@ -31,6 +32,7 @@ Simple Deluge client for Go
         fmt.Printf("%s,%s,%f,%f\n", t.Id, t.Name, t.Progress, t.ShareRatio)
     }
 
+    // Remove a single element
     if err = deluge.Remove("f7647dfb2e9d..."); err != nil {
         panic(err)
     }
